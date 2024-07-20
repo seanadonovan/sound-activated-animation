@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Activated SVG Animation</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #010101;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #animation-container {
+            position: relative;
+            width: 80vmin; /* Reduced size */
+            height: 80vmin; /* Reduced size */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            position: relative;
+        }
+
+        .rectangle, .background-rectangle {
+            position: absolute;
+            background-color: #EE4398;
+            opacity: 0;
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        .background-rectangle {
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="animation-container">
+        <!-- SVG Content -->
+        <svg viewBox="0 0 1374 636" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M331.5 33H33V301M381.5 602.5H33V301M33 301C33 301 215.319 301 331.5 301" stroke="#E8E7E7" stroke-width="65"/>
+            <path d="M463.09 635.5L463.137 420.75M463.137 207.5V420.75M463.137 420.75C463.137 420.75 452.612 238.5 611.047 238.5C769.482 238.5 762.635 403.5 762.635 403.5C762.635 403.5 762.588 545.484 762.588 635.5" stroke="#E8E7E7" stroke-width="65"/>
+            <path d="M877.516 464.5V392.5C877.516 392.5 875.955 238.5 1025.01 238.5C1174.06 238.5 1174.02 389.5 1174.02 389.5V464.5C1174.02 464.5 1163.52 602 1025 602C886.485 602 877.516 464.5 877.516 464.5Z" stroke="#E8E7E7" stroke-width="65"/>
+            <rect x="1259" y="520.5" width="114" height="114" fill="#E8E7E7" stroke="#E8E7E7"/>
+        </svg>
+        <div id="background-layer" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;"></div>
+        <div id="text-layer" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;"></div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const textLayer = document.getElementById('text-layer');
+            const backgroundLayer = document.getElementById('background-layer');
+            const maxElements = 100; // Limit the number of elements on screen
+            let elementCount = 0;
+            let backgroundInterval;
+
+            function createElement(className, x, y, speedMultiplier = 1) {
+                if (elementCount >= maxElements) return;
+
+                const elem = document.createElement('div');
+                elem.classList.add(className);
+                textLayer.appendChild(elem);
+
+                const width = `${Math.random() * 100 + 20}px`; // Random width between 20 and 120
+                const height = `${Math.random() * 50 + 20}px`; // Random height between 20 and 70
+                elem.style.width = width;
+                elem.style.height = height;
+
+                const initialX = typeof x !== 'undefined' ? x : Math.random() * (textLayer.clientWidth - 100);
+                const initialY = typeof y !== 'undefined' ? y : Math.random() * (textLayer.clientHeight - 50);
+                elem.style.left = `${initialX}px`;
+                elem.style.top = `${initialY}px`;
+
+                elem.style.opacity = 1;
+                elementCount++;
+
+                setTimeout(() => {
+                    const gridSize = 50;
+                    const newX = Math.floor(Math.random() * (textLayer.clientWidth - gridSize) / gridSize) * gridSize;
+                    const newY = Math.floor(Math.random() * (textLayer.clientHeight - gridSize) / gridSize) * gridSize;
+                    elem.style.transform = `translate(${newX - initialX}px, ${newY - initialY}px)`;
+                }, 100 / speedMultiplier);
+
+                const duration = Math.random() * 2000 + 1000 / speedMultiplier; // Random duration between 1 and 3 seconds
+
+                setTimeout(() => {
+                    elem.style.opacity = 0;
+                    setTimeout(() => {
+                        textLayer.removeChild(elem);
+                        elementCount--;
+                    }, 500 / speedMultiplier);
+                }, duration);
+            }
+
+            function createBackgroundRectangle(speedMultiplier = 1) {
+                const rect = document.createElement('div');
+                rect.classList.add('background-rectangle');
+                backgroundLayer.appendChild(rect);
+
+                const width = Math.random() * 200 + 50; // Random width between 50 and 250
+                const height = Math.random() * 100 + 50; // Random height between 50 and 150
+                rect.style.width = `${width}px`;
+                rect.style.height = `${height}px`;
+
+                const initialX = Math.random() * (backgroundLayer.clientWidth - width);
+                const initialY = Math.random() * (backgroundLayer.clientHeight - height);
+                rect.style.left = `${initialX}px`;
+                rect.style.top = `${initialY}px`;
+
+                rect.style.opacity = 1;
+
+                const duration = Math.random() * 3000 + 1000 / speedMultiplier; // Random duration between 1 and 4 seconds
+
+                setTimeout(() => {
+                    rect.style.opacity = 0;
+                    setTimeout(() => {
+                        backgroundLayer.removeChild(rect);
+                    }, 500 / speedMultiplier);
+                }, duration);
+            }
+
+            function handleSoundInput() {
+                if (!navigator.mediaDevices.getUserMedia) {
+                    alert('getUserMedia not supported on your browser!');
+                    return;
+                }
+
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const analyser = audioContext.createAnalyser();
+                    const microphone = audioContext.createMediaStreamSource(stream);
+                    const scriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+
+                    analyser.smoothingTimeConstant = 0.8;
+                    analyser.fftSize = 1024;
+
+                    microphone.connect(analyser);
+                    analyser.connect(scriptProcessor);
+                    scriptProcessor.connect(audioContext.destination);
+                    scriptProcessor.onaudioprocess = () => {
+                        const array = new Uint8Array(analyser.frequencyBinCount);
+                        analyser.getByteFrequencyData(array);
+                        const average = array.reduce((a, b) => a + b, 0) / array.length;
+
+                        if (average > 30) { // Increased sound threshold to reduce sensitivity
+                            const speedMultiplier = Math.min(average / 50, 5); // Speed multiplier based on sound level
+                            createElement('rectangle', undefined, undefined, speedMultiplier);
+                            clearInterval(backgroundInterval);
+                            backgroundInterval = setInterval(() => createBackgroundRectangle(speedMultiplier), 500 / speedMultiplier);
+                        }
+                    };
+                }).catch(err => {
+                    console.error('The following error occurred: ' + err);
+                });
+            }
+
+            // Initial background rectangles creation
+            backgroundInterval = setInterval(() => createBackgroundRectangle(1), 500);
+
+            handleSoundInput();
+        });
+    </script>
+</body>
+</html>
